@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface BoardRepository extends JpaRepository<Board, Long> {
+public interface BoardRepository extends JpaRepository<Board, Long>, SearchBoardRepository{
     //Member와 Board Entity의 JOIN을 수행하는 메서드를 생성
     //Board Entity에는 Member Entity와 연관 관계를 갖는 writer가 존재
 
@@ -33,4 +33,11 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
             "from Board b left join b.writer w left join Reply r on r.board = b "+
             "GROUP BY b", countQuery = "select count(b) from Board b")
     Page<Object []> getBoardWithReplyCount(Pageable pageable);
+
+    //게시글 상세보기를 위한 메서드
+    @Query("select b, w, count(r) from Board b " +
+            "left join b.writer w left outer join Reply r on r.board=b " +
+            "where b.bno=:bno")
+    Object getBoardByBno(@Param("bno") Long bno);
+
 }
