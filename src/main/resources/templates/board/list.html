@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<!-- layout 파일을 설정 -->
+<th:block th:replace="~{/layout/basic :: setContent(~{this::content} )}">
+    <!-- layout에 출력할 내용 -->
+    <th:block th:fragment="content">
+
+        <h1 class="mt-4">Board List Page
+            <span>
+                <!-- 삽입 링크 -->
+                <a th:href="@{/board/register}">
+                    <button type="button" class="btn btn-outline-primary">REGISTER
+                    </button>
+                </a>
+            </span>
+        </h1>
+
+        <!-- 검색 폼 -->
+        <form action="/board/list" method="get" id="searchForm">
+            <div class="input-group">
+                <!-- 기본 페이지 번호를 숨김으로 생성 -->
+                <input type="hidden" name="page" value = "1">
+                <div class="input-group-prepend">
+                    <!-- 검색 조건 선택란 -->
+                    <select class="custom-select" name="type">
+                        <option th:selected="${pageRequestDTO.type == null}">-------</option>
+                        <option value="t" th:selected="${pageRequestDTO.type=='t'}" >제목</option>
+                        <option value="c" th:selected="${pageRequestDTO.type=='c'}" >내용</option>
+                        <option value="w" th:selected="${pageRequestDTO.type=='w'}" >작성자</option>
+                        <option value="tc" th:selected="${pageRequestDTO.type =='tc'}" >제목 + 내용</option>
+                        <option value="tcw" th:selected="${pageRequestDTO.type =='tcw'}" >제목 + 내용 + 작성자</option>
+                    </select>
+                </div>
+
+                <!-- 검색할 키워드 입력 -->
+                <input class="form-control" name="keyword" th:value="${pageRequestDTO.keyword}">
+
+                <!-- 검색 버튼과 초기화해서 검색하는 버튼 -->
+                <div class="input-group-append" id="button-addon4">
+                    <button class="btn btn-outline-secondary btn-search" type="button">Search</button>
+                    <button class="btn btn-outline-secondary btn-clear" type="button">Clear</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- 데이터 목록 출력 -->
+        <table class="table table-striped">
+            <!-- 출력하는 열의 제목 -->
+            <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Title</th>
+                <th scope="col">Writer</th>
+                <th scope="col">Regdate</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="dto : ${result.dtoList}" >
+                <!-- 글 번호 출력 -->
+                <th scope="row">
+                    <!-- 상세보기 링크 -->
+                    <a th:href="@{/board/read(bno = ${dto.bno},
+                    page= ${result.page},
+                    type=${pageRequestDTO.type},
+                    keyword = ${pageRequestDTO.keyword})}">
+                        [[${dto.bno}]]
+                    </a>
+                </th>
+
+                <!-- 제목과 댓글 수를 출력 -->
+                <td>[[${dto.title}]] ---------------- [<b th:text="${dto.replyCount}"></b>]</td>
+               <!-- 작성자 이름과 이메일 출력 -->
+                <td>[[${dto.writerName}]] <small>[[${dto.writerEmail}]]</small> </td>
+                <!-- 작성일을 출력 -->
+                <td>[[${#temporals.format(dto.regDate, 'yyyy/MM/dd')}]]</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <!-- 페이지 번호 출력 -->
+        <ul class="pagination h-100 justify-content-center align-items-center">
+            <!-- 이전 페이지 -->
+            <li class="page-item " th:if="${result.prev}">
+                <a class="page-link" th:href="@{/board/list(
+                    page= ${result.start -1},
+                    type=${pageRequestDTO.type},
+                    keyword = ${pageRequestDTO.keyword} ) }" tabindex="-1">
+                        Previous
+                </a>
+            </li>
+            <!-- 페이지 번호 - 현재 페이지 번호에는 링크를 설정하지 않음 -->
+            <li th:class=" 'page-item ' + ${result.page == page?'active':''} " th:each="page:${result.pageList}">
+                <a class="page-link" th:href="@{/board/list(
+                    page = ${page},
+                    type=${pageRequestDTO.type},
+                    keyword = ${pageRequestDTO.keyword} )}">
+                        [[${page}]]
+                </a>
+            </li>
+            <!-- 다음 페이지 -->
+            <li class="page-item" th:if="${result.next}">
+                <a class="page-link" th:href="@{/board/list(
+                    page= ${result.end + 1},
+                    type=${pageRequestDTO.type},
+                    keyword = ${pageRequestDTO.keyword} )}">
+                        Next
+                </a>
+            </li>
+        </ul>
+
+        <!-- 대화 상자 -->
+        <!-- 삽입이나 삭제 후 목록 보기로 온 경우 작업 내용을 출력 -->
+        <div class="modal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">삽입 및 삭제</h5>
+                        <button type="button" class="close" data-dismiss="modal" arialabel="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p>[[${msg}]]</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" datadismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 스크립트 -->
+        <script th:inline="javascript">
+            //msg가 있는 경우 모달 창을 출력
+            var msg = [[${msg}]];
+            console.log(msg);
+
+            if(msg){
+                $(".modal").modal();
+            }
+
+            //검색 폼의 버튼을 눌렀을 때 처리
+            var searchForm = $("#searchForm");
+            $('.btn-search').click(function(e){
+                searchForm.submit();
+            });
+            $('.btn-clear').click(function(e){
+                searchForm.empty().submit();
+            });
+        </script>
+
+    </th:block>
+</th:block>
